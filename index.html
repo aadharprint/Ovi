@@ -1,351 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocuForm Studio - In-Browser PDF & Document Generator</title>
+    <title>ओवी आधार प्रिंट सर्विस</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: { primary: '#1e3a8a', secondary: '#475569', accent: '#f59e0b' }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
-    <!-- html2pdf.js bundle -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; }
-        .print-sheet { width: 210mm; min-height: 297mm; padding: 16mm 18mm; margin: 0 auto; background: white; box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1); box-sizing: border-box; color: #0f172a; font-size: 13.5px; line-height: 1.6; }
-        @media print {
-            body * { visibility: hidden; }
-            #documentToPrint, #documentToPrint * { visibility: visible; }
-            #documentToPrint { position: absolute; left: 0; top: 0; width: 100% !important; margin: 0 !important; padding: 12mm 15mm !important; box-shadow: none !important; }
-        }
-    </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+<body class="bg-blue-50 min-h-screen flex flex-col items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
 
-    <!-- APP CONTAINER -->
-    <div id="app" class="flex-1 flex flex-col"></div>
+    <!-- मेन कंटेनर -->
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 md:p-10 border-t-4 border-blue-600">
+        
+        <!-- हेडर सेक्शन -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-blue-800 mb-3">ओवी आधार प्रिंट सर्विस</h1>
+            <p class="text-gray-600 text-sm md:text-base">कृपया नीचे दिए गए मेनू से अपना फॉर्म चुनें।</p>
+        </div>
 
+        <!-- ड्रॉपडाउन सेक्शन -->
+        <div class="mb-8">
+            <label for="formDropdown" class="block text-sm font-semibold text-gray-700 mb-2">दस्तावेज़ चुनें:</label>
+            <select id="formDropdown" onchange="showButton()" class="block w-full bg-gray-50 border border-blue-300 text-gray-900 text-lg rounded-lg focus:ring-blue-600 focus:border-blue-600 p-4 shadow-sm cursor-pointer transition duration-200 ease-in-out hover:border-blue-500 outline-none">
+                <option value="">-- कृपया यहाँ क्लिक करके दस्तावेज़ चुनें --</option>
+                
+                <!-- आपके फॉर्म्स के असली नाम -->
+                <option value="https://docs.google.com/forms/d/1lkJFrM4LglIZYyir9Qh1ygu_JHT1XB99WYBEKmLx-gw/viewform">बागपत मूल निवास</option>
+                <option value="https://docs.google.com/forms/d/1wPfH86NWL3haRHe3Z0dj69FzhTZCUMZQvmdMUANmoIA/viewform">Date of Birth Certificate Meerut</option>
+                <option value="https://docs.google.com/forms/d/1I_X_PBGZqJgpc3dUebfhwPSYZger-e-3pt8SqDSERII/viewform">शामली मूल निवास</option>
+                <option value="https://docs.google.com/forms/d/1qYp-oP9MpuQ4tBxoa6NJ8aAEiEw_yIpEcomasa7cXQc/viewform">मुज़फ्फरनगर मूल निवास</option>
+                <option value="https://docs.google.com/forms/d/1tBAoyEVGeUzWhX6WIHzm9skbka_fjp3qw9odIIP0A90/viewform">Annexure 1 for Adult</option>
+            </select>
+        </div>
+
+        <!-- फॉर्म खोलने का बटन (सर्विस चुनने के बाद ही दिखेगा) -->
+        <div id="actionContainer" class="hidden flex flex-col items-center">
+            <p class="text-green-600 text-sm font-medium mb-4">दस्तावेज़ सफलतापूर्वक चुन लिया गया है!</p>
+            <button onclick="openForm()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition hover:scale-105 flex items-center justify-center text-lg">
+                <span>फॉर्म खोलें और भरें</span>
+                <!-- एरो (Arrow) आइकॉन -->
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+            </button>
+            <p class="text-gray-400 text-xs mt-3 text-center">फोटो अपलोड और सुरक्षा कारणों से यह फॉर्म एक नए सुरक्षित टैब में खुलेगा।</p>
+        </div>
+        
+    </div>
+
+    <!-- जावास्क्रिप्ट (बटन दिखाने और नए टैब में खोलने के लिए) -->
     <script>
-        // Document Configurations
-        const TEMPLATES = [
-            {
-                id: 'domicile_certificate',
-                name: 'UP E-District Domicile Certificate (निवास प्रमाण पत्र)',
-                category: 'Revenue & E-District',
-                description: 'Office of Sub-Divisional Magistrate General Residence Certificate format with photograph.',
-                fields: [
-                    { key: 'reg_no', label: 'Application No. (आवेदन क्र०)', type: 'text', placeholder: 'e.g. 24151200105432' },
-                    { key: 'cert_no', label: 'Certificate No. (प्रमाण पत्र क्र०)', type: 'text', placeholder: 'e.g. 24151200105432' },
-                    { key: 'name_en', label: 'Name (English)', type: 'text', placeholder: 'e.g. HARISH KUMAR' },
-                    { key: 'name_hi', label: 'नाम (हिंदी)', type: 'text', placeholder: 'उदा० हरीश कुमार' },
-                    { key: 'father_en', label: 'Father\'s Name (English)', type: 'text', placeholder: 'e.g. SUBHASH CHAND' },
-                    { key: 'father_hi', label: 'पिता का नाम (हिंदी)', type: 'text', placeholder: 'उदा० सुभाष चंद' },
-                    { key: 'address_en', label: 'Full Address (English)', type: 'textarea', placeholder: 'House, Village, Post, Tehsil, District' },
-                    { key: 'address_hi', label: 'पूरा पता (हिंदी)', type: 'textarea', placeholder: 'मकान, ग्राम, पोस्ट, तहसील, जिला' },
-                    { key: 'photo', label: 'Upload Passport Photo', type: 'file' }
-                ],
-                render: (data) => `
-                    <div id="documentToPrint" class="print-sheet">
-                        <div class="text-center mb-8 border-b-2 border-slate-300 pb-4">
-                            <h2 class="text-xl font-bold text-brand-primary mb-2">उत्तर प्रदेश शासन</h2>
-                            <h3 class="text-lg font-semibold text-brand-secondary">कार्यालय उप जिलाधिकारी</h3>
-                            <h1 class="text-2xl font-bold tracking-tight mt-1 text-slate-900">निवास प्रमाण पत्र</h1>
-                        </div>
-                        <div class="flex justify-between items-start mb-10 text-sm font-medium text-slate-700">
-                            <div>
-                                <p><span class="text-slate-500">आवेदन क्र०:</span> ${data.reg_no || '........................'}</p>
-                                <p><span class="text-slate-500 mt-2">प्रमाण पत्र क्र०:</span> ${data.cert_no || '........................'}</p>
-                            </div>
-                            <div class="w-32 h-40 border border-slate-300 flex items-center justify-center bg-slate-50 overflow-hidden shadow-sm">
-                                ${data.photo ? `<img src="${data.photo}" class="w-full h-full object-cover">` : '<span class="text-slate-400 text-xs">फोटो यहाँ</span>'}
-                            </div>
-                        </div>
-                        <div class="space-y-6 text-base text-slate-800 leading-relaxed font-light">
-                            <p>प्रमाणित किया जाता है कि <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.name_en || '..................................'} (हिंदी: ${data.name_hi || '....................'})</span>,</p>
-                            <p>आत्मज / पत्नी श्री <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.father_en || '..................................'} (हिंदी: ${data.father_hi || '....................'})</span>,</p>
-                            <p>निवासी <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.address_en || '..................................................................'}</span></p>
-                            <p><span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.address_hi || '..................................................................'}</span></p>
-                            <p>जिला - <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">उत्तर प्रदेश</span>, भारत के मूल निवासी हैं।</p>
-                        </div>
-                        <div class="mt-24 flex justify-end">
-                            <div class="text-center">
-                                <div class="w-32 h-16 border-dashed border-t border-slate-800 mx-auto"></div>
-                                <p class="text-sm font-semibold text-slate-900 mt-2">उप जिलाधिकारी / तहसीलदार</p>
-                                <p class="text-xs text-slate-600">राजस्व विभाग, उत्तर प्रदेश</p>
-                            </div>
-                        </div>
-                    </div>
-                `
-            },
-            {
-                id: 'dob_affidavit_adult',
-                name: 'Annexure-I: Date of Birth Update Affidavit (Adults)',
-                category: 'Aadhaar Enrollment Services',
-                description: 'Legal affidavit format for DoB corrections in Aadhaar for applicants over 18 years.',
-                fields: [
-                    { key: 'deponent_name', label: 'Deponent Name (English)', type: 'text', placeholder: 'e.g. HARISH KUMAR' },
-                    { key: 'deponent_father', label: 'S/D/W/o Shri (English)', type: 'text', placeholder: 'e.g. SUBHASH CHAND' },
-                    { key: 'deponent_address', label: 'Full Address (English)', type: 'textarea', placeholder: 'House, Village, Post, Tehsil, District, State' },
-                    { key: 'new_dob', label: 'Correct Date of Birth (DD/MM/YYYY)', type: 'date' },
-                    { key: 'wrong_dob', label: 'Incorrect Date of Birth in Aadhaar', type: 'date' }
-                ],
-                render: (data) => `
-                    <div id="documentToPrint" class="print-sheet">
-                        <div class="text-center mb-8 border-b-2 border-slate-300 pb-4">
-                            <h1 class="text-2xl font-bold tracking-tight text-slate-900">ANNEXURE - I</h1>
-                            <h2 class="text-lg font-semibold text-slate-800 mt-2">AFFIDAVIT FOR UPDATE OF DATE OF BIRTH IN AADHAAR</h2>
-                        </div>
-                        <div class="space-y-4 text-sm text-slate-700 leading-relaxed font-light mb-8">
-                            <p>I, <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.deponent_name || '..................................................................'}</span></p>
-                            <p>aged about <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">....</span> years, S/D/W/o Shri <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.deponent_father || '......................................................'}</span></p>
-                            <p>resident of <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.deponent_address || '..................................................................'}</span></p>
-                            <p>do hereby solemnly affirm and declare as under:</p>
-                        </div>
-                        <div class="space-y-6 text-base text-slate-800 leading-relaxed font-light">
-                            <p>1. That I am a citizen of India and hold an Aadhaar Number issued by UIDAI.</p>
-                            <p>2. That my correct Date of Birth is <span class="font-semibold text-brand-primary border-b border-dashed border-brand-primary">${data.new_dob || 'DD/MM/YYYY'}</span>.</p>
-                            <p>3. That my Date of Birth was earlier incorrectly recorded/updated in Aadhaar as <span class="font-semibold text-red-600 border-b border-dashed border-red-600">${data.wrong_dob || 'DD/MM/YYYY'}</span>.</p>
-                            <p>4. That I request UIDAI to update my Date of Birth to the correct one as mentioned above.</p>
-                        </div>
-                        <div class="mt-16 pt-16 flex justify-between">
-                            <div class="text-left">
-                                <p class="text-xs text-slate-500">Date: ......................</p>
-                                <p class="text-xs text-slate-500">Place: ......................</p>
-                            </div>
-                            <div class="text-center">
-                                <div class="w-32 h-16 border-dashed border-t border-slate-800 mx-auto"></div>
-                                <p class="text-sm font-semibold text-slate-900 mt-2">DEPONENT</p>
-                            </div>
-                        </div>
-                    </div>
-                `
-            }
-        ];
-
-        // Core Application Class
-        class DocuFormApp {
-            constructor() {
-                this.currentUser = null;
-                this.currentTemplateId = TEMPLATES[0].id;
-                this.formData = {};
-                this.initAuth();
-            }
-
-            initAuth() {
-                const sessionUser = sessionStorage.getItem('currentUser');
-                if (sessionUser) {
-                    this.currentUser = sessionUser;
-                    this.renderMainInterface();
-                } else {
-                    this.renderLogin();
-                }
-            }
-
-            handleLogin(e) {
-                e.preventDefault();
-                const id = document.getElementById('operatorId').value;
-                const pass = document.getElementById('password').value;
-
-                if (id === 'operator' && pass === 'kendra123') {
-                    sessionStorage.setItem('currentUser', id);
-                    this.currentUser = id;
-                    this.renderMainInterface();
-                } else {
-                    alert('Invalid ID or Password (Default: operator / kendra123)');
-                }
-            }
-
-            handleLogout() {
-                sessionStorage.removeItem('currentUser');
-                this.currentUser = null;
-                this.renderLogin();
-            }
-
-            renderLogin() {
-                const app = document.getElementById('app');
-                app.innerHTML = `
-                    <div class="flex-1 flex items-center justify-center bg-gradient-to-br from-brand-primary/10 via-slate-100 to-brand-primary/10 p-6">
-                        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-                            <div class="bg-brand-primary p-8 text-center text-white">
-                                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <i class="fa-solid fa-file-invoice text-2xl text-white"></i>
-                                </div>
-                                <h1 class="text-2xl font-bold tracking-tight">DocuForm Studio</h1>
-                                <p class="text-slate-200 mt-2 font-light">In-Browser Document Generator</p>
-                            </div>
-                            <form id="loginForm" class="p-8 space-y-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-2">Operator ID</label>
-                                    <input type="text" id="operatorId" required class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition transition-all placeholder-slate-400" placeholder="Enter Operator ID">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
-                                    <input type="password" id="password" required class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition transition-all placeholder-slate-400" placeholder="Enter Password">
-                                </div>
-                                <button type="submit" class="w-full bg-brand-primary hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-brand-primary/20 transition-all transform hover:-translate-y-1">Sign In</button>
-                            </form>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
-            }
-
-            changeTemplate(id) {
-                this.currentTemplateId = id;
-                this.formData = {};
-                this.renderMainInterface();
-            }
-
-            updateFormData(key, value) {
-                // Formatting Text to Uppercase for specific template fields
-                if (key.includes('name') || key === 'reg_no' || key === 'cert_no') {
-                    value = value.toUpperCase();
-                }
-                this.formData[key] = value;
-                this.renderDocumentPreview();
-            }
-
-            handlePhotoUpload(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        this.formData.photo = event.target.result;
-                        this.renderDocumentPreview();
-                    };
-                    reader.readAsDataURL(file);
-                }
-            }
-
-            exportPDF() {
-                const element = document.getElementById('documentToPrint');
-                const opt = {
-                    margin:       10,
-                    filename:     `doc_${this.currentTemplateId}_${Date.now()}.pdf`,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-                html2pdf().set(opt).from(element).save();
-            }
-
-            renderDocumentPreview() {
-                const previewContainer = document.getElementById('documentPreview');
-                const template = TEMPLATES.find(t => t.id === this.currentTemplateId);
-                if (template) {
-                    previewContainer.innerHTML = template.render(this.formData);
-                }
-            }
-
-            renderMainInterface() {
-                const app = document.getElementById('app');
-                const template = TEMPLATES.find(t => t.id === this.currentTemplateId);
-
-                app.innerHTML = `
-                    <!-- Header -->
-                    <header class="bg-white shadow-sm border-b border-slate-200">
-                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <i class="fa-solid fa-file-invoice text-brand-primary text-xl"></i>
-                                <span class="font-bold text-lg text-slate-900">DocuForm Studio</span>
-                            </div>
-                            <div class="flex items-center space-x-6">
-                                <span class="text-sm font-medium text-slate-500 flex items-center"><i class="fa-solid fa-circle-user text-brand-primary mr-2"></i> Operator ID: <strong class="text-slate-900 ml-1">${this.currentUser}</strong></span>
-                                <button id="logoutBtn" class="text-sm font-medium text-red-600 hover:text-red-700 flex items-center"><i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out</button>
-                            </div>
-                        </div>
-                    </header>
-
-                    <!-- Main Content -->
-                    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8 overflow-hidden">
-                        <!-- Left Pane: Input Form -->
-                        <div class="lg:w-1/2 flex flex-col gap-6">
-                            <!-- Template Selector -->
-                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                <label class="block text-sm font-medium text-slate-700 mb-3">Select Document Configuration</label>
-                                <select id="templateSelector" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium text-slate-900">
-                                    ${TEMPLATES.map(t => `<option value="${t.id}" ${t.id === this.currentTemplateId ? 'selected' : ''}>${t.name}</option>`).join('')}
-                                </select>
-                            </div>
-
-                            <!-- Dynamic Form -->
-                            <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-6 overflow-hidden">
-                                <div class="border-b border-slate-200 pb-4">
-                                    <h2 class="text-lg font-bold text-slate-900">${template.name}</h2>
-                                    <p class="text-sm text-slate-500 mt-1">${template.description}</p>
-                                </div>
-                                <form id="dynamicForm" class="flex-1 overflow-y-auto pr-2 space-y-5">
-                                    ${template.fields.map(field => `
-                                        <div>
-                                            <label class="block text-sm font-medium text-slate-700 mb-2">${field.label}</label>${field.type === 'textarea' ?
-                                                `<textarea id="${field.key}" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all placeholder-slate-400" placeholder="${field.placeholder || ''}"></textarea>`
-                                            : field.type === 'file' ?
-                                                `<input type="file" id="${field.key}" accept="image/*" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all bg-slate-50">`
-                                            :
-                                                `<input type="${field.type}" id="${field.key}" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all placeholder-slate-400" placeholder="${field.placeholder || ''}">`
-                                            }
-                                        </div>
-                                    `).join('')}
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Right Pane: Preview & Actions -->
-                        <div class="lg:w-1/2 flex flex-col gap-6">
-                            <!-- Document Preview -->
-                            <div class="flex-1 bg-slate-200 rounded-xl shadow-inner border border-slate-300 p-8 overflow-y-auto flex items-center justify-center">
-                                <div id="documentPreview" class="transform origin-top">
-                                    ${template.render(this.formData)}
-                                </div>
-                            </div>
-
-                            <!-- Actions -->
-                            <div class="flex space-x-4">
-                                <button id="printBtn" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center"><i class="fa-solid fa-print mr-2"></i> Print & Save PDF</button>
-                            </div>
-                        </div>
-                    </main>
-                `;
-
-                // Event Listeners
-                document.getElementById('logoutBtn').addEventListener('click', () => this.handleLogout());
-
-                document.getElementById('templateSelector').addEventListener('change', (e) => this.changeTemplate(e.target.value));
-
-                const inputs = document.querySelectorAll('#dynamicForm input, #dynamicForm textarea');
-                inputs.forEach(input => {
-                    input.addEventListener('input', (e) => {
-                        if (e.target.type === 'file') {
-                            this.handlePhotoUpload(e);
-                        } else {
-                            this.updateFormData(e.target.id, e.target.value);
-                        }
-                    });
-                });
-
-                document.getElementById('printBtn').addEventListener('click', () => this.exportPDF());
+        function showButton() {
+            const dropdown = document.getElementById("formDropdown");
+            const actionContainer = document.getElementById("actionContainer");
+            
+            if (dropdown.value) {
+                // फॉर्म चुनने पर बटन दिखाएं
+                actionContainer.classList.remove("hidden");
+            } else {
+                // कुछ न चुनने पर बटन छिपा लें
+                actionContainer.classList.add("hidden");
             }
         }
 
-        // Initialize Application
-        document.addEventListener('DOMContentLoaded', () => {
-            new DocuFormApp();
-        });
+        function openForm() {
+            const dropdown = document.getElementById("formDropdown");
+            if (dropdown.value) {
+                // फॉर्म को नए टैब में खोलें
+                window.open(dropdown.value, '_blank');
+            }
+        }
     </script>
 </body>
 </html>
