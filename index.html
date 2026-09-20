@@ -1,757 +1,351 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DocuForm Studio - In-Browser PDF & Document Generator</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- html2pdf.js bundle -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <!-- Fonts: Inter & Noto Sans Devanagari for Hindi text rendering -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-  <style>
-    body {
-      font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
-    }
-    .print-sheet {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 16mm 18mm;
-      margin: 0 auto;
-      background: white;
-      box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
-      box-sizing: border-box;
-      color: #0f172a;
-      font-size: 13.5px;
-      line-height: 1.6;
-    }
-    @media print {
-      body * {
-        visibility: hidden !important;
-      }
-      #documentToPrint, #documentToPrint * {
-        visibility: visible !important;
-      }
-      #documentToPrint {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 12mm 15mm !important;
-        box-shadow: none !important;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocuForm Studio - In-Browser PDF & Document Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { primary: '#1e3a8a', secondary: '#475569', accent: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <!-- html2pdf.js bundle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', 'Noto Sans Devanagari', sans-serif; }
+        .print-sheet { width: 210mm; min-height: 297mm; padding: 16mm 18mm; margin: 0 auto; background: white; box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1); box-sizing: border-box; color: #0f172a; font-size: 13.5px; line-height: 1.6; }
+        @media print {
+            body * { visibility: hidden; }
+            #documentToPrint, #documentToPrint * { visibility: visible; }
+            #documentToPrint { position: absolute; left: 0; top: 0; width: 100% !important; margin: 0 !important; padding: 12mm 15mm !important; box-shadow: none !important; }
+        }
+    </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
-  <!-- APP CONTAINER -->
-  <div id="app" class="flex-1 flex flex-col"></div>
-
-  <script>
-    // Document Configurations
-    const TEMPLATES = [
-      {
-        id: 'domicile_certificate',
-        name: 'UP E-District Domicile Certificate (निवास प्रमाण पत्र)',
-        category: 'Revenue & E-District',
-        description: 'Office of Sub-Divisional Magistrate General Residence Certificate format with photograph & verification layout.',
-        fields: [
-          { key: 'reg_no', label: 'Application No. (आवेदन क्र०)', type: 'text', placeholder: 'e.g. 241540012345', uppercase: true, required: true },
-          { key: 'cert_no', label: 'Certificate No. (प्रमाणपत्र क्र०)', type: 'text', placeholder: 'e.g. 054240012345', uppercase: true, required: true },
-          { key: 'date', label: 'Date (दिनाँक)', type: 'date', defaultToday: true, required: true },
-          { key: 'name_en', label: 'Applicant Name (English)', type: 'text', placeholder: 'e.g. HARISH KUMAR', uppercase: true, required: true },
-          { key: 'name_hi', label: 'Applicant Name (Hindi)', type: 'text', placeholder: 'उदा० हरीश कुमार', required: true },
-          { key: 'relation', label: 'Relation (सम्बन्ध)', type: 'select', options: ['पुत्र (Son of)', 'पुत्री (Daughter of)', 'पत्नी (Wife of)', 'आश्रित (Dependent of)'], default: 'पुत्र (Son of)' },
-          { key: 'guardian_name', label: 'Father / Husband Name (पिता/पति का नाम)', type: 'text', placeholder: 'e.g. SUBHASH CHAND', uppercase: true, required: true },
-          { key: 'mother_name', label: 'Mother Name (माता का नाम)', type: 'text', placeholder: 'e.g. KAUSHAL DEVI', uppercase: true, required: true },
-          { key: 'house_no', label: 'House No. (मकान नम्बर)', type: 'text', placeholder: 'e.g. 154', uppercase: true },
-          { key: 'mohalla', label: 'Mohalla / Patti (मोहल्ला / मजरा)', type: 'text', placeholder: 'e.g. PATTI MADAN', uppercase: true, required: true },
-          { key: 'village', label: 'Village / Gram (ग्राम)', type: 'text', placeholder: 'e.g. DOGHAT', uppercase: true, required: true },
-          { key: 'police_station', label: 'Police Station / Thana (थाना)', type: 'text', placeholder: 'e.g. DOGHAT', uppercase: true, required: true },
-          { key: 'tehsil', label: 'Tehsil (तहसील)', type: 'select', options: ['बड़ौत (BARAUT)', 'बागपत (BAGHPAT)', 'खेखड़ा (KHEKRA)', 'कैराना (KAIRANA)', 'शामली (SHAMLI)', 'ऊन (OON)', 'बुढ़ाना (BUDHANA)', 'मुज़फ़्फ़रनगर (MUZAFFARNAGAR)'], default: 'बड़ौत (BARAUT)' },
-          { key: 'district', label: 'District (जनपद)', type: 'select', options: ['बागपत (BAGHPAT)', 'शामली (SHAMLI)', 'मुज़फ़्फ़रनगर (MUZAFFARNAGAR)', 'मेरठ (MEERUT)', 'सहारनपुर (SAHARANPUR)'], default: 'बागपत (BAGHPAT)' },
-          { key: 'center_name', label: 'Issuing Center (जन सेवा केन्द्र / CSC)', type: 'text', placeholder: 'e.g. JAN SEVA KENDRA DOGHAT', uppercase: true, default: 'JAN SEVA KENDRA' },
-          { key: 'photo', label: 'Applicant Photo', type: 'file', accept: 'image/*', required: false }
-        ]
-      },
-      {
-        id: 'annexure_1_adult',
-        name: 'Annexure-I: Affidavit for DoB Update (Adults)',
-        category: 'UIDAI / Jan Seva Kendra',
-        description: 'Format for adult date of birth updation declaration on non-judicial stamp paper.',
-        fields: [
-          { key: 'name', label: 'Deponent Full Name', type: 'text', placeholder: 'e.g. HARISH KUMAR', uppercase: true, required: true },
-          { key: 'relation_type', label: 'Relation Prefix', type: 'select', options: ['S/o (Son of)', 'D/o (Daughter of)', 'W/o (Wife of)'], default: 'S/o (Son of)' },
-          { key: 'father_name', label: 'Father / Husband Name', type: 'text', placeholder: 'e.g. SUBHASH CHAND', uppercase: true, required: true },
-          { key: 'address', label: 'Complete Residential Address', type: 'text', placeholder: 'e.g. VILLAGE DOGHAT, DISTRICT BAGHPAT, U.P. 250622', uppercase: true, required: true },
-          { key: 'uid_display', label: 'Aadhaar Reference (Redacted Placeholder)', type: 'text', placeholder: 'e.g. XXXX-XXXX-XXXX', default: 'XXXX-XXXX-XXXX' },
-          { key: 'new_dob', label: 'Correct Date of Birth (New DoB)', type: 'date', required: true },
-          { key: 'old_dob', label: 'Earlier Recorded Date of Birth', type: 'date', required: true },
-          { key: 'old_document', label: 'Earlier Document Basis', type: 'select', options: ['MARKSHEET', 'BIRTH CERTIFICATE', 'TRANSFER CERTIFICATE', 'PAN CARD', 'PASSPORT'], default: 'MARKSHEET' },
-          { key: 'new_document', label: 'New Supporting Document', type: 'select', options: ['BIRTH CERTIFICATE', 'MARKSHEET WITH DOB', 'GAZETTE NOTIFICATION', 'PASSPORT'], default: 'BIRTH CERTIFICATE' },
-          { key: 'update_times', label: 'Number of Previous Updates', type: 'select', options: ['NEVER', 'ONCE', 'MORE THAN ONCE'], default: 'ONCE' },
-          { key: 'date', label: 'Affidavit Date', type: 'date', defaultToday: true, required: true },
-          { key: 'place', label: 'Place', type: 'text', placeholder: 'e.g. BARAUT', uppercase: true, default: 'BARAUT' }
-        ]
-      },
-      {
-        id: 'annexure_1a_child',
-        name: 'Annexure-IA: Affidavit for DoB Update (Children / Minors)',
-        category: 'UIDAI / Jan Seva Kendra',
-        description: 'Format for minor date of birth updation declaration by parent or legal guardian.',
-        fields: [
-          { key: 'parent_name', label: 'Parent / Guardian Name (Deponent)', type: 'text', placeholder: 'e.g. HARISH KUMAR', uppercase: true, required: true },
-          { key: 'parent_relation', label: 'Deponent Relation Prefix', type: 'select', options: ['S/o', 'D/o', 'W/o'], default: 'S/o' },
-          { key: 'grandparent_name', label: 'Parent's Father / Husband Name', type: 'text', placeholder: 'e.g. SUBHASH CHAND', uppercase: true, required: true },
-          { key: 'address', label: 'Residential Address', type: 'text', placeholder: 'e.g. PATTI MADAN, DOGHAT, BAGHPAT, U.P.', uppercase: true, required: true },
-          { key: 'child_name', label: 'Minor Child / Ward Name', type: 'text', placeholder: 'e.g. OJASVI', uppercase: true, required: true },
-          { key: 'child_uid_display', label: 'Child Reference / UID Placeholder', type: 'text', placeholder: 'e.g. XXXX-XXXX-XXXX', default: 'XXXX-XXXX-XXXX' },
-          { key: 'new_dob', label: 'Correct Date of Birth of Child', type: 'date', required: true },
-          { key: 'old_dob', label: 'Earlier Recorded Date of Birth', type: 'date', required: true },
-          { key: 'new_document', label: 'Document Submitted', type: 'select', options: ['MUNICIPAL BIRTH CERTIFICATE', 'HOSPITAL BIRTH RECORD', 'PASSPORT'], default: 'MUNICIPAL BIRTH CERTIFICATE' },
-          { key: 'update_times', label: 'Previous Update Count', type: 'select', options: ['NEVER', 'ONCE', 'MORE THAN ONCE'], default: 'ONCE' },
-          { key: 'date', label: 'Affidavit Date', type: 'date', defaultToday: true, required: true },
-          { key: 'place', label: 'Place', type: 'text', placeholder: 'e.g. BAGHPAT', uppercase: true, default: 'BAGHPAT' }
-        ]
-      }
-    ];
-
-    // State Store
-    const state = {
-      isAuthenticated: localStorage.getItem('docu_auth_token') === 'true',
-      currentUser: localStorage.getItem('docu_user') || 'Operator',
-      activeTemplateId: TEMPLATES[0].id,
-      formData: {},
-      photoDataUrl: null,
-      scale: 1.0
-    };
-
-    function setAuth(status, username = '') {
-      state.isAuthenticated = status;
-      if (status) {
-        localStorage.setItem('docu_auth_token', 'true');
-        localStorage.setItem('docu_user', username || 'Operator');
-        state.currentUser = username || 'Operator';
-      } else {
-        localStorage.removeItem('docu_auth_token');
-        localStorage.removeItem('docu_user');
-      }
-      renderApp();
-    }
-
-    function getTodayYMD() {
-      const now = new Date();
-      return now.toISOString().split('T')[0];
-    }
-
-    function formatDateDisplay(ymd) {
-      if (!ymd) return '';
-      const parts = ymd.split('-');
-      if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}/${parts[0]}`;
-      }
-      return ymd;
-    }
-
-    function initFormData(templateId) {
-      const tpl = TEMPLATES.find(t => t.id === templateId) || TEMPLATES[0];
-      state.formData = {};
-      state.photoDataUrl = null;
-      tpl.fields.forEach(f => {
-        if (f.defaultToday) {
-          state.formData[f.key] = getTodayYMD();
-        } else if (f.default) {
-          state.formData[f.key] = f.default;
-        } else {
-          state.formData[f.key] = '';
-        }
-      });
-    }
-
-    function renderApp() {
-      const root = document.getElementById('app');
-      if (!state.isAuthenticated) {
-        root.innerHTML = renderLoginView();
-        bindLoginEvents();
-      } else {
-        root.innerHTML = renderDashboardView();
-        bindDashboardEvents();
-        updatePreview();
-      }
-    }
-
-    // 1. LOGIN VIEW
-    function renderLoginView() {
-      return `
-        <div class="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex flex-col justify-center items-center p-4">
-          <div class="max-w-md w-full bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
-            <div class="text-center mb-8">
-              <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white text-2xl mb-4 shadow-lg shadow-indigo-500/30">
-                <i class="fa-solid fa-file-shield"></i>
-              </div>
-              <h1 class="text-2xl font-bold text-slate-900 tracking-tight">DocuForm Studio</h1>
-              <p class="text-xs text-slate-500 mt-1">In-Browser Document & PDF Generation Platform</p>
-              <div class="inline-block bg-indigo-50 text-indigo-700 text-[11px] px-3 py-1 rounded-full font-semibold mt-2.5">
-                <i class="fa-solid fa-bolt text-amber-500 mr-1"></i> 100% Client-Side • Vercel Ready
-              </div>
-            </div>
-
-            <form id="loginForm" class="space-y-4">
-              <div id="loginError" class="hidden bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl p-3"></div>
-
-              <div>
-                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1.5">Operator ID</label>
-                <div class="relative">
-                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400"><i class="fa-solid fa-user text-xs"></i></span>
-                  <input type="text" id="loginUsername" value="operator" required class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold uppercase text-slate-600 mb-1.5">Access Password</label>
-                <div class="relative">
-                  <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400"><i class="fa-solid fa-lock text-xs"></i></span>
-                  <input type="password" id="loginPassword" value="kendra123" required class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
-                <label class="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" id="rememberMe" checked class="rounded text-indigo-600 focus:ring-indigo-500">
-                  <span>Keep me signed in</span>
-                </label>
-                <span class="text-indigo-600 font-medium text-[11px]">Pass: kendra123</span>
-              </div>
-
-              <button type="submit" class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition duration-150 flex items-center justify-center space-x-2">
-                <span>Access Document Workspace</span>
-                <i class="fa-solid fa-arrow-right text-xs"></i>
-              </button>
-            </form>
-
-            <div class="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-400">
-              <p>Replaces Google Apps Script + Drive delays with instantaneous in-browser rendering.</p>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function bindLoginEvents() {
-      const form = document.getElementById('loginForm');
-      const errEl = document.getElementById('loginError');
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const u = document.getElementById('loginUsername').value.trim();
-        const p = document.getElementById('loginPassword').value.trim();
-        if (p === 'kendra123' || p === 'admin123' || p.length >= 4) {
-          initFormData(state.activeTemplateId);
-          setAuth(true, u);
-        } else {
-          errEl.textContent = 'Invalid credentials. Password must be at least 4 characters.';
-          errEl.classList.remove('hidden');
-        }
-      });
-    }
-
-    // 2. DASHBOARD VIEW
-    function renderDashboardView() {
-      const currentTemplate = TEMPLATES.find(t => t.id === state.activeTemplateId) || TEMPLATES[0];
-
-      return `
-        <!-- Top Navbar -->
-        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 text-lg">
-                <i class="fa-solid fa-file-invoice"></i>
-              </div>
-              <div>
-                <div class="flex items-center space-x-2">
-                  <span class="font-bold text-slate-900 tracking-tight text-base">DocuForm Studio</span>
-                  <span class="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Fast In-Browser</span>
-                </div>
-                <p class="text-xs text-slate-500 hidden sm:block">Instant Form-to-PDF Generator</p>
-              </div>
-            </div>
-
-            <!-- Configuration Selector in Navbar -->
-            <div class="flex items-center space-x-3">
-              <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
-                <label class="text-xs font-semibold text-slate-600 px-3 flex items-center space-x-1.5">
-                  <i class="fa-solid fa-file-lines text-indigo-600 text-xs"></i>
-                  <span class="hidden sm:inline">Select Configuration:</span>
-                </label>
-                <select id="templateDropdownNav" class="bg-white text-xs font-semibold text-indigo-900 rounded-lg px-3 py-1.5 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-xs max-w-[220px] sm:max-w-none">
-                  ${TEMPLATES.map(t => `<option value="${t.id}" ${t.id === state.activeTemplateId ? 'selected' : ''}>${t.name}</option>`).join('')}
-                </select>
-              </div>
-
-              <!-- Sign Out -->
-              <div class="flex items-center space-x-2 pl-2 border-l border-slate-200">
-                <button id="logoutBtn" title="Sign Out" class="flex items-center space-x-1.5 px-3 py-1.5 text-xs text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition font-medium">
-                  <i class="fa-solid fa-right-from-bracket text-xs"></i>
-                  <span class="hidden md:inline">Logout</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <!-- Main Workspace -->
-        <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <!-- LEFT COLUMN: Dynamic Input Form (5 cols) -->
-          <div class="lg:col-span-5 flex flex-col space-y-4">
-            
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col flex-1">
-              <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
-                <div>
-                  <span class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">${currentTemplate.category}</span>
-                  <h2 class="text-xs font-bold text-slate-900">${currentTemplate.name}</h2>
-                </div>
-                <button id="resetFormBtn" class="text-[11px] text-slate-500 hover:text-red-600 flex items-center space-x-1 font-medium bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                  <i class="fa-solid fa-arrow-rotate-left text-[10px]"></i>
-                  <span>Clear All</span>
-                </button>
-              </div>
-
-              <!-- Form Fields -->
-              <form id="dynamicForm" class="p-5 space-y-3.5 overflow-y-auto max-h-[calc(100vh-270px)]">
-                ${renderFormFields(currentTemplate)}
-              </form>
-
-              <!-- Sticky Actions -->
-              <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center space-x-2.5">
-                <button id="generatePdfBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold py-2.5 px-4 rounded-xl shadow-md shadow-indigo-600/20 flex items-center justify-center space-x-2 transition">
-                  <i class="fa-solid fa-file-pdf"></i>
-                  <span>Download Formatted PDF</span>
-                </button>
-                <button id="instantPrintBtn" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold py-2.5 px-4 rounded-xl shadow-md flex items-center space-x-2 transition">
-                  <i class="fa-solid fa-print"></i>
-                  <span>Print</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Workflow Replacement Callout -->
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 flex items-start space-x-2.5">
-              <i class="fa-solid fa-circle-check text-emerald-600 mt-0.5 text-sm"></i>
-              <div>
-                <p class="font-bold">Zero-Dependency Flow Active</p>
-                <p class="text-[11px] text-emerald-700 mt-0.5">
-                  PDF generation occurs 100% inside your web browser. No waiting for email deliveries or auto-deleting files from Google Drive.
-                </p>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- RIGHT COLUMN: Live Document & PDF Preview (7 cols) -->
-          <div class="lg:col-span-7 flex flex-col space-y-4">
-            
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 flex items-center justify-between">
-              <div class="flex items-center space-x-2.5">
-                <span class="flex h-2.5 w-2.5 relative">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                </span>
-                <span class="text-xs font-bold text-slate-800">Live Formatted Preview</span>
-                <span class="text-[11px] text-slate-400 hidden sm:inline">• Real-time updates as you type</span>
-              </div>
-
-              <div class="flex items-center space-x-2">
-                <button id="downloadDirectBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs flex items-center space-x-1.5 transition">
-                  <i class="fa-solid fa-download text-xs"></i>
-                  <span>Save PDF</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Preview Viewport -->
-            <div id="previewViewport" class="bg-slate-300/60 rounded-2xl border border-slate-300 p-4 sm:p-6 overflow-auto flex-1 flex justify-center items-start shadow-inner min-h-[620px]">
-              <!-- Printable Sheet -->
-              <div id="documentToPrint" class="print-sheet text-slate-900">
-                <!-- Template HTML rendered here -->
-              </div>
-            </div>
-
-          </div>
-
-        </main>
-      `;
-    }
-
-    function renderFormFields(template) {
-      return template.fields.map(f => {
-        const val = state.formData[f.key] !== undefined ? state.formData[f.key] : '';
-
-        if (f.type === 'file') {
-          return `
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">${f.label}</label>
-              <div class="flex items-center space-x-3">
-                <div id="photoPreviewWrap" class="w-16 h-20 bg-slate-100 border border-dashed border-slate-300 rounded-lg flex items-center justify-center overflow-hidden text-slate-400 text-xs">
-                  ${state.photoDataUrl ? `<img src="${state.photoDataUrl}" class="w-full h-full object-cover">` : '<i class="fa-regular fa-image text-lg"></i>'}
-                </div>
-                <div class="flex-1">
-                  <input type="file" id="field_${f.key}" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-                  <span class="text-[10px] text-slate-400 mt-0.5 block">Upload photograph (JPG/PNG)</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-
-        if (f.type === 'select') {
-          return `
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">${f.label} ${f.required ? '<span class="text-red-500">*</span>' : ''}</label>
-              <select data-key="${f.key}" class="form-input w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                ${f.options.map(opt => `<option value="${opt}" ${val === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-              </select>
-            </div>
-          `;
-        }
-
-        return `
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">${f.label} ${f.required ? '<span class="text-red-500">*</span>' : ''}</label>
-            <input 
-              type="${f.type || 'text'}" 
-              data-key="${f.key}" 
-              value="${val}" 
-              placeholder="${f.placeholder || ''}"
-              ${f.uppercase ? 'data-uppercase="true"' : ''}
-              ${f.required ? 'required' : ''}
-              class="form-input w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${f.uppercase ? 'uppercase' : ''}"
-            >
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderDocumentTemplate() {
-      const tplId = state.activeTemplateId;
-      const d = state.formData;
-
-      if (tplId === 'domicile_certificate') {
-        const photoHtml = state.photoDataUrl 
-          ? `<img src="${state.photoDataUrl}" style="width: 32mm; height: 40mm; object-fit: cover; border: 1px solid #94a3b8; border-radius: 4px;">`
-          : `<div style="width: 32mm; height: 40mm; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 10px; color: #94a3b8; border-radius: 4px; padding: 4px;">आवेदक का फोटो</div>`;
-
-        return `
-          <div style="font-family: 'Noto Sans Devanagari', 'Inter', serif; color: #0f172a;">
-            <!-- Header -->
-            <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px;">
-              <div style="font-size: 12.5px; font-weight: bold; color: #1e3a8a; letter-spacing: 0.5px;">ई-डिस्ट्रिक्ट के अंतर्गत जारी… (e-District Uttar Pradesh)</div>
-              <div style="font-size: 19px; font-weight: 800; color: #0f172a; margin: 3px 0;">उत्तर प्रदेश शासन (GOVERNMENT OF UTTAR PRADESH)</div>
-              <div style="font-size: 14.5px; font-weight: 700; color: #334155;">कार्यालय उप जिलाधिकारी द्वारा प्रदत्त सामान्य निवास प्रमाण पत्र</div>
-              <div style="font-size: 12.5px; font-weight: 600; color: #475569; margin-top: 2px;">जनपद: <b>${d.district || 'बागपत'}</b> | तहसील: <b>${d.tehsil || 'बड़ौत'}</b></div>
-            </div>
-
-            <!-- Meta Box -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; background: #f8fafc; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px;">
-              <div>
-                <div style="font-size: 12px;"><b>आवेदन क्र० (Application No.):</b> <span style="font-family: monospace; font-size: 12.5px;">${d.reg_no || '2415400XXXXX'}</span></div>
-                <div style="font-size: 12px; margin-top: 3px;"><b>प्रमाणपत्र क्र० (Certificate No.):</b> <span style="font-family: monospace; font-size: 12.5px;">${d.cert_no || '0542400XXXXX'}</span></div>
-              </div>
-              <div style="text-align: right;">
-                <div style="font-size: 12px;"><b>दिनाँक (Date):</b> ${formatDateDisplay(d.date) || formatDateDisplay(getTodayYMD())}</div>
-                <div style="font-size: 11px; color: #16a34a; font-weight: 700; margin-top: 3px;"><i class="fa-solid fa-circle-check"></i> डिजिटल सत्यापित प्रमाण पत्र</div>
-              </div>
-            </div>
-
-            <!-- Body with Photo -->
-            <div style="display: flex; gap: 16px; margin-bottom: 12px;">
-              <div style="flex: 1; text-align: justify; line-height: 1.75; font-size: 13px;">
-                <p style="margin-bottom: 8px;">
-                  सम्बन्धित लेखपाल की जांच आख्या दिनांक <b>${formatDateDisplay(d.date) || formatDateDisplay(getTodayYMD())}</b> के आधार पर एतद् द्वारा प्रमाणित किया जाता है कि:
-                </p>
-                
-                <div style="background: #fafafa; border-left: 3px solid #2563eb; padding: 6px 12px; margin-bottom: 10px;">
-                  <div style="font-size: 14.5px; font-weight: 700; color: #0f172a;">${d.name_en || 'APPLICANT NAME'} (${d.name_hi || 'आवेदक का नाम'})</div>
-                  <div style="font-size: 12.5px; color: #334155; margin-top: 2px;"><b>${d.relation || 'पुत्र/पुत्री'} :</b> ${d.guardian_name || 'FATHER / HUSBAND NAME'}</div>
-                  <div style="font-size: 12.5px; color: #334155; margin-top: 2px;"><b>माता का नाम :</b> ${d.mother_name || 'MOTHER NAME'}</div>
-                  <div style="font-size: 12.5px; color: #334155; margin-top: 2px;"><b>मकान नम्बर :</b> ${d.house_no || '---'} | <b>मोहल्ला/मजरा :</b> ${d.mohalla || '---'}</div>
-                  <div style="font-size: 12.5px; color: #334155; margin-top: 2px;"><b>ग्राम :</b> ${d.village || '---'} | <b>थाना :</b> ${d.police_station || '---'}</div>
-                  <div style="font-size: 12.5px; color: #334155; margin-top: 2px;"><b>तहसील :</b> ${d.tehsil || 'बड़ौत'} | <b>जनपद :</b> ${d.district || 'बागपत'} (उत्तर प्रदेश)</div>
-                </div>
-
-                <p>
-                  उपर्युक्त का/की निवासी है व उसका वर्तमान पता मकान नम्बर <b>${d.house_no || '---'}</b>, ग्राम <b>${d.village || '---'}</b>, मोहल्ला <b>${d.mohalla || '---'}</b>, तहसील <b>${d.tehsil || 'बड़ौत'}</b>, जनपद <b>${d.district || 'बागपत'}</b>, उत्तर प्रदेश है।
-                </p>
-                <p style="margin-top: 6px;">
-                  2. उपर्युक्त की पुष्टि प्रारूप-1 में आवेदन एवं सत्यापनकर्ता द्वारा उपलब्ध कराई गई सूचना तथा इससे संतुष्ट हो जाने के उपरान्त अधोहस्ताक्षरी द्वारा उत्तर प्रदेश के इस जनपद का सामान्य निवासी होने का विषयक प्रमाण पत्र निर्गत किया जाता है।
-                </p>
-              </div>
-
-              <!-- Photo Box -->
-              <div style="width: 34mm; text-align: center; flex-shrink: 0;">
-                ${photoHtml}
-                <div style="font-size: 10px; color: #64748b; margin-top: 4px;">प्रमाणित छायाचित्र</div>
-              </div>
-            </div>
-
-            <!-- Footer / Verification -->
-            <div style="margin-top: 20px; border-top: 1px solid #cbd5e1; padding-top: 12px; display: flex; justify-content: space-between; align-items: flex-end;">
-              <div style="font-size: 11px; color: #475569; max-width: 60%; line-height: 1.5;">
-                <div><b>जारीकर्ता केन्द्र:</b> ${d.center_name || 'जन सेवा केन्द्र'}</div>
-                <div><b>स्थान:</b> ${d.tehsil || 'बड़ौत'}, ${d.district || 'बागपत'}</div>
-                <div><b>दिनाँक:</b> ${formatDateDisplay(d.date) || formatDateDisplay(getTodayYMD())}</div>
-                <div style="margin-top: 6px; font-size: 9.5px; color: #64748b;">
-                  नोट: यह प्रमाण पत्र ईलैक्ट्रानिक डिलिवरी सिस्टम द्वारा तैयार किया गया है। वेबसाइट edistrict.up.gov.in पर सत्यापित किया जा सकता है।
-                </div>
-              </div>
-
-              <div style="border: 1.5px solid #1e40af; background: #eff6ff; padding: 8px 12px; border-radius: 6px; text-align: center; min-width: 180px;">
-                <div style="font-size: 10.5px; font-weight: bold; color: #1e3a8a;"><i class="fa-solid fa-signature"></i> सक्षम अधिकारी / उप जिलाधिकारी</div>
-                <div style="font-size: 10px; color: #1d4ed8; margin: 2px 0;">Digitally Signed & Certified</div>
-                <div style="font-size: 9px; color: #475569;">तहसील ${d.tehsil || 'बड़ौत'}, ${d.district || 'बागपत'}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      if (tplId === 'annexure_1_adult') {
-        return `
-          <div style="line-height: 1.7; font-size: 13px;">
-            <div style="text-align: center; margin-bottom: 18px;">
-              <h2 style="font-size: 15.5px; font-weight: bold; text-decoration: underline;">Annexure-I - For Adults</h2>
-              <h3 style="font-size: 13.5px; font-weight: bold; margin-top: 3px;">Affidavit for date of birth updation</h3>
-              <p style="font-size: 10.5px; font-style: italic; color: #475569;">(Applicable for cases where the DoB is verified in Aadhaar. To be printed on non-judicial stamp paper of minimum value of ₹10)</p>
-            </div>
-
-            <p style="margin-bottom: 10px; text-align: justify;">
-              1. I, <b>${d.name || 'NAME'}</b> ${d.relation_type || 'S/o'} <b>${d.father_name || 'FATHER NAME'}</b>, resident of <b>${d.address || 'RESIDENTIAL ADDRESS'}</b> holding Aadhaar number <b>${d.uid_display || 'XXXX-XXXX-XXXX'}</b>, do hereby solemnly affirm and declare as under:-
-            </p>
-
-            <ol style="list-style-type: lower-roman; padding-left: 22px; margin-bottom: 14px;">
-              <li style="margin-bottom: 5px;">That I am the resident of the above said address.</li>
-              <li style="margin-bottom: 5px;">That my correct date of birth is <b>${formatDateDisplay(d.new_dob) || 'DD/MM/YYYY'}</b>.</li>
-              <li style="margin-bottom: 5px;">That the earlier recorded date of birth in Aadhaar is <b>${formatDateDisplay(d.old_dob) || 'DD/MM/YYYY'}</b> based on <b>${d.old_document || 'MARKSHEET'}</b> document submitted by me.</li>
-              <li style="margin-bottom: 5px;">That I have <b>${d.update_times || 'ONCE'}</b> updated my date of birth in Aadhaar.</li>
-              <li style="margin-bottom: 5px;">That currently a corrected version of the same document as mentioned in (iii) above / birth certificate (choose as applicable) is being provided in support of DoB update request.</li>
-              <li style="margin-bottom: 5px;">That I wish to get my date of birth updated in the Aadhaar as, <b>${formatDateDisplay(d.new_dob) || 'DD/MM/YYYY'}</b> for which I am submitting <b>${d.new_document || 'BIRTH CERTIFICATE'}</b> as proof of date of birth.</li>
-              <li style="margin-bottom: 5px;">That I further undertake that I shall not be eligible for any further updation of my date of birth in Aadhaar.</li>
-            </ol>
-
-            <p style="margin-bottom: 10px; text-align: justify;">
-              2. I undertake that if the document submitted as proof of date of birth is found to be fraudulent/false/forged/non-genuine or I was not entitled for the said document, my Aadhaar number may be deactivated as per Regulation 28 of the Aadhaar (Enrolment and Update) Regulations, 2016 and I shall be liable to be prosecuted under provisions of the applicable law.
-            </p>
-
-            <p style="margin-bottom: 20px; text-align: justify;">
-              3. I hereby declare that all the information mentioned above is true to the best of my knowledge. In case of any discrepancies, the undersigned will be held responsible.
-            </p>
-
-            <div style="margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end;">
-              <div>
-                <div><b>Date:</b> ${formatDateDisplay(d.date) || formatDateDisplay(getTodayYMD())}</div>
-                <div><b>Place:</b> ${d.place || 'BARAUT'}</div>
-              </div>
-
-              <div style="text-align: center; min-width: 190px;">
-                <div style="border-bottom: 1px solid #000; width: 170px; margin: 0 auto 5px;"></div>
-                <div style="font-weight: bold;">${d.name || 'DEPONENT NAME'}</div>
-                <div style="font-size: 10.5px;">Name & Signature of Resident (Deponent)</div>
-              </div>
-            </div>
-
-            <div style="margin-top: 25px; border-top: 1px dashed #94a3b8; padding-top: 8px; font-size: 10px; color: #64748b; text-align: center;">
-              (This affidavit may be signed and attested in presence of a Judicial Magistrate or Executive Magistrate / Notary Public)
-            </div>
-          </div>
-        `;
-      }
-
-      if (tplId === 'annexure_1a_child') {
-        return `
-          <div style="line-height: 1.7; font-size: 13px;">
-            <div style="text-align: center; margin-bottom: 18px;">
-              <h2 style="font-size: 15.5px; font-weight: bold; text-decoration: underline;">Annexure-IA - For Children</h2>
-              <h3 style="font-size: 13.5px; font-weight: bold; margin-top: 3px;">Affidavit for date of birth updation</h3>
-              <p style="font-size: 10.5px; font-style: italic; color: #475569;">(Applicable for cases where the DoB is verified in Aadhaar. To be printed on non-judicial stamp paper of minimum value of ₹10)</p>
-            </div>
-
-            <p style="margin-bottom: 10px; text-align: justify;">
-              1. I, <b>${d.parent_name || 'PARENT NAME'}</b> ${d.parent_relation || 'S/o'} <b>${d.grandparent_name || 'GRANDPARENT NAME'}</b>, resident of <b>${d.address || 'RESIDENTIAL ADDRESS'}</b>, do hereby solemnly affirm and declare as under:-
-            </p>
-
-            <ol style="list-style-type: decimal; padding-left: 22px; margin-bottom: 14px;">
-              <li style="margin-bottom: 5px;">That I am the resident of the above said address.</li>
-              <li style="margin-bottom: 5px;">That I am parent / legal guardian of <b>${d.child_name || 'CHILD NAME'}</b> holding Aadhaar reference <b>${d.child_uid_display || 'XXXX-XXXX-XXXX'}</b>.</li>
-              <li style="margin-bottom: 5px;">That correct date of birth of my child / ward is <b>${formatDateDisplay(d.new_dob) || 'DD/MM/YYYY'}</b>.</li>
-              <li style="margin-bottom: 5px;">That the earlier recorded date of birth in Aadhaar of my child / ward is <b>${formatDateDisplay(d.old_dob) || 'DD/MM/YYYY'}</b>.</li>
-              <li style="margin-bottom: 5px;">That I have <b>${d.update_times || 'ONCE'}</b> updated my child/ward date of birth in Aadhaar.</li>
-              <li style="margin-bottom: 5px;">That birth certificate of my child / ward is being provided in support of DoB update request.</li>
-              <li style="margin-bottom: 5px;">That I wish to get my child/ward date of birth updated in the Aadhaar for which I am submitting <b>${d.new_document || 'BIRTH CERTIFICATE'}</b> as proof of date of birth.</li>
-              <li style="margin-bottom: 5px;">That I further undertake that my child/ward shall not be eligible for any further updation of date of birth in Aadhaar.</li>
-            </ol>
-
-            <p style="margin-bottom: 10px; text-align: justify;">
-              2. I undertake that if the document submitted as proof of date of birth is found to be fraudulent/false/forged/non-genuine or my child/ward was not entitled for the said document, the Aadhaar number of my child/ward may be deactivated as per Regulation 28 of the Aadhaar (Enrolment and Update) Regulations, 2016 and I shall be liable to be prosecuted under provisions of the applicable law.
-            </p>
-
-            <p style="margin-bottom: 20px; text-align: justify;">
-              3. I hereby declare that all the information mentioned above is true to the best of my knowledge. In case of any discrepancies, the undersigned will be held responsible.
-            </p>
-
-            <div style="margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end;">
-              <div>
-                <div><b>Date:</b> ${formatDateDisplay(d.date) || formatDateDisplay(getTodayYMD())}</div>
-                <div><b>Place:</b> ${d.place || 'BAGHPAT'}</div>
-              </div>
-
-              <div style="text-align: center; min-width: 190px;">
-                <div style="border-bottom: 1px solid #000; width: 170px; margin: 0 auto 5px;"></div>
-                <div style="font-weight: bold;">${d.parent_name || 'PARENT / GUARDIAN'}</div>
-                <div style="font-size: 10.5px;">Name & Signature of Parent/Guardian (Deponent)</div>
-              </div>
-            </div>
-
-            <div style="margin-top: 25px; border-top: 1px dashed #94a3b8; padding-top: 8px; font-size: 10px; color: #64748b; text-align: center;">
-              (This affidavit may be signed and attested in presence of a Judicial Magistrate or Executive Magistrate / Notary Public)
-            </div>
-          </div>
-        `;
-      }
-
-      return `<div>Select a configuration template to begin.</div>`;
-    }
-
-    function updatePreview() {
-      const sheet = document.getElementById('documentToPrint');
-      if (sheet) {
-        sheet.innerHTML = renderDocumentTemplate();
-      }
-    }
-
-    function bindDashboardEvents() {
-      const logoutBtn = document.getElementById('logoutBtn');
-      if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => setAuth(false));
-      }
-
-      const navSelect = document.getElementById('templateDropdownNav');
-      if (navSelect) {
-        navSelect.addEventListener('change', (e) => {
-          state.activeTemplateId = e.target.value;
-          initFormData(e.target.value);
-          renderApp();
-        });
-      }
-
-      const resetBtn = document.getElementById('resetFormBtn');
-      if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-          if (confirm('Clear all fields for this template?')) {
-            initFormData(state.activeTemplateId);
-            renderApp();
-          }
-        });
-      }
-
-      const dynamicForm = document.getElementById('dynamicForm');
-      if (dynamicForm) {
-        dynamicForm.addEventListener('input', (e) => {
-          const target = e.target;
-          const key = target.getAttribute('data-key');
-          if (key) {
-            if (target.getAttribute('data-uppercase') === 'true') {
-              const start = target.selectionStart;
-              const end = target.selectionEnd;
-              target.value = target.value.toUpperCase();
-              target.setSelectionRange(start, end);
+    <!-- APP CONTAINER -->
+    <div id="app" class="flex-1 flex flex-col"></div>
+
+    <script>
+        // Document Configurations
+        const TEMPLATES = [
+            {
+                id: 'domicile_certificate',
+                name: 'UP E-District Domicile Certificate (निवास प्रमाण पत्र)',
+                category: 'Revenue & E-District',
+                description: 'Office of Sub-Divisional Magistrate General Residence Certificate format with photograph.',
+                fields: [
+                    { key: 'reg_no', label: 'Application No. (आवेदन क्र०)', type: 'text', placeholder: 'e.g. 24151200105432' },
+                    { key: 'cert_no', label: 'Certificate No. (प्रमाण पत्र क्र०)', type: 'text', placeholder: 'e.g. 24151200105432' },
+                    { key: 'name_en', label: 'Name (English)', type: 'text', placeholder: 'e.g. HARISH KUMAR' },
+                    { key: 'name_hi', label: 'नाम (हिंदी)', type: 'text', placeholder: 'उदा० हरीश कुमार' },
+                    { key: 'father_en', label: 'Father\'s Name (English)', type: 'text', placeholder: 'e.g. SUBHASH CHAND' },
+                    { key: 'father_hi', label: 'पिता का नाम (हिंदी)', type: 'text', placeholder: 'उदा० सुभाष चंद' },
+                    { key: 'address_en', label: 'Full Address (English)', type: 'textarea', placeholder: 'House, Village, Post, Tehsil, District' },
+                    { key: 'address_hi', label: 'पूरा पता (हिंदी)', type: 'textarea', placeholder: 'मकान, ग्राम, पोस्ट, तहसील, जिला' },
+                    { key: 'photo', label: 'Upload Passport Photo', type: 'file' }
+                ],
+                render: (data) => `
+                    <div id="documentToPrint" class="print-sheet">
+                        <div class="text-center mb-8 border-b-2 border-slate-300 pb-4">
+                            <h2 class="text-xl font-bold text-brand-primary mb-2">उत्तर प्रदेश शासन</h2>
+                            <h3 class="text-lg font-semibold text-brand-secondary">कार्यालय उप जिलाधिकारी</h3>
+                            <h1 class="text-2xl font-bold tracking-tight mt-1 text-slate-900">निवास प्रमाण पत्र</h1>
+                        </div>
+                        <div class="flex justify-between items-start mb-10 text-sm font-medium text-slate-700">
+                            <div>
+                                <p><span class="text-slate-500">आवेदन क्र०:</span> ${data.reg_no || '........................'}</p>
+                                <p><span class="text-slate-500 mt-2">प्रमाण पत्र क्र०:</span> ${data.cert_no || '........................'}</p>
+                            </div>
+                            <div class="w-32 h-40 border border-slate-300 flex items-center justify-center bg-slate-50 overflow-hidden shadow-sm">
+                                ${data.photo ? `<img src="${data.photo}" class="w-full h-full object-cover">` : '<span class="text-slate-400 text-xs">फोटो यहाँ</span>'}
+                            </div>
+                        </div>
+                        <div class="space-y-6 text-base text-slate-800 leading-relaxed font-light">
+                            <p>प्रमाणित किया जाता है कि <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.name_en || '..................................'} (हिंदी: ${data.name_hi || '....................'})</span>,</p>
+                            <p>आत्मज / पत्नी श्री <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.father_en || '..................................'} (हिंदी: ${data.father_hi || '....................'})</span>,</p>
+                            <p>निवासी <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.address_en || '..................................................................'}</span></p>
+                            <p><span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.address_hi || '..................................................................'}</span></p>
+                            <p>जिला - <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">उत्तर प्रदेश</span>, भारत के मूल निवासी हैं।</p>
+                        </div>
+                        <div class="mt-24 flex justify-end">
+                            <div class="text-center">
+                                <div class="w-32 h-16 border-dashed border-t border-slate-800 mx-auto"></div>
+                                <p class="text-sm font-semibold text-slate-900 mt-2">उप जिलाधिकारी / तहसीलदार</p>
+                                <p class="text-xs text-slate-600">राजस्व विभाग, उत्तर प्रदेश</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 'dob_affidavit_adult',
+                name: 'Annexure-I: Date of Birth Update Affidavit (Adults)',
+                category: 'Aadhaar Enrollment Services',
+                description: 'Legal affidavit format for DoB corrections in Aadhaar for applicants over 18 years.',
+                fields: [
+                    { key: 'deponent_name', label: 'Deponent Name (English)', type: 'text', placeholder: 'e.g. HARISH KUMAR' },
+                    { key: 'deponent_father', label: 'S/D/W/o Shri (English)', type: 'text', placeholder: 'e.g. SUBHASH CHAND' },
+                    { key: 'deponent_address', label: 'Full Address (English)', type: 'textarea', placeholder: 'House, Village, Post, Tehsil, District, State' },
+                    { key: 'new_dob', label: 'Correct Date of Birth (DD/MM/YYYY)', type: 'date' },
+                    { key: 'wrong_dob', label: 'Incorrect Date of Birth in Aadhaar', type: 'date' }
+                ],
+                render: (data) => `
+                    <div id="documentToPrint" class="print-sheet">
+                        <div class="text-center mb-8 border-b-2 border-slate-300 pb-4">
+                            <h1 class="text-2xl font-bold tracking-tight text-slate-900">ANNEXURE - I</h1>
+                            <h2 class="text-lg font-semibold text-slate-800 mt-2">AFFIDAVIT FOR UPDATE OF DATE OF BIRTH IN AADHAAR</h2>
+                        </div>
+                        <div class="space-y-4 text-sm text-slate-700 leading-relaxed font-light mb-8">
+                            <p>I, <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.deponent_name || '..................................................................'}</span></p>
+                            <p>aged about <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">....</span> years, S/D/W/o Shri <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.deponent_father || '......................................................'}</span></p>
+                            <p>resident of <span class="font-semibold text-slate-900 border-b border-dashed border-slate-400">${data.deponent_address || '..................................................................'}</span></p>
+                            <p>do hereby solemnly affirm and declare as under:</p>
+                        </div>
+                        <div class="space-y-6 text-base text-slate-800 leading-relaxed font-light">
+                            <p>1. That I am a citizen of India and hold an Aadhaar Number issued by UIDAI.</p>
+                            <p>2. That my correct Date of Birth is <span class="font-semibold text-brand-primary border-b border-dashed border-brand-primary">${data.new_dob || 'DD/MM/YYYY'}</span>.</p>
+                            <p>3. That my Date of Birth was earlier incorrectly recorded/updated in Aadhaar as <span class="font-semibold text-red-600 border-b border-dashed border-red-600">${data.wrong_dob || 'DD/MM/YYYY'}</span>.</p>
+                            <p>4. That I request UIDAI to update my Date of Birth to the correct one as mentioned above.</p>
+                        </div>
+                        <div class="mt-16 pt-16 flex justify-between">
+                            <div class="text-left">
+                                <p class="text-xs text-slate-500">Date: ......................</p>
+                                <p class="text-xs text-slate-500">Place: ......................</p>
+                            </div>
+                            <div class="text-center">
+                                <div class="w-32 h-16 border-dashed border-t border-slate-800 mx-auto"></div>
+                                <p class="text-sm font-semibold text-slate-900 mt-2">DEPONENT</p>
+                            </div>
+                        </div>
+                    </div>
+                `
             }
-            state.formData[key] = target.value;
-            updatePreview();
-          }
+        ];
+
+        // Core Application Class
+        class DocuFormApp {
+            constructor() {
+                this.currentUser = null;
+                this.currentTemplateId = TEMPLATES[0].id;
+                this.formData = {};
+                this.initAuth();
+            }
+
+            initAuth() {
+                const sessionUser = sessionStorage.getItem('currentUser');
+                if (sessionUser) {
+                    this.currentUser = sessionUser;
+                    this.renderMainInterface();
+                } else {
+                    this.renderLogin();
+                }
+            }
+
+            handleLogin(e) {
+                e.preventDefault();
+                const id = document.getElementById('operatorId').value;
+                const pass = document.getElementById('password').value;
+
+                if (id === 'operator' && pass === 'kendra123') {
+                    sessionStorage.setItem('currentUser', id);
+                    this.currentUser = id;
+                    this.renderMainInterface();
+                } else {
+                    alert('Invalid ID or Password (Default: operator / kendra123)');
+                }
+            }
+
+            handleLogout() {
+                sessionStorage.removeItem('currentUser');
+                this.currentUser = null;
+                this.renderLogin();
+            }
+
+            renderLogin() {
+                const app = document.getElementById('app');
+                app.innerHTML = `
+                    <div class="flex-1 flex items-center justify-center bg-gradient-to-br from-brand-primary/10 via-slate-100 to-brand-primary/10 p-6">
+                        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+                            <div class="bg-brand-primary p-8 text-center text-white">
+                                <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fa-solid fa-file-invoice text-2xl text-white"></i>
+                                </div>
+                                <h1 class="text-2xl font-bold tracking-tight">DocuForm Studio</h1>
+                                <p class="text-slate-200 mt-2 font-light">In-Browser Document Generator</p>
+                            </div>
+                            <form id="loginForm" class="p-8 space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Operator ID</label>
+                                    <input type="text" id="operatorId" required class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition transition-all placeholder-slate-400" placeholder="Enter Operator ID">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+                                    <input type="password" id="password" required class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition transition-all placeholder-slate-400" placeholder="Enter Password">
+                                </div>
+                                <button type="submit" class="w-full bg-brand-primary hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-brand-primary/20 transition-all transform hover:-translate-y-1">Sign In</button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('loginForm').addEventListener('submit', (e) => this.handleLogin(e));
+            }
+
+            changeTemplate(id) {
+                this.currentTemplateId = id;
+                this.formData = {};
+                this.renderMainInterface();
+            }
+
+            updateFormData(key, value) {
+                // Formatting Text to Uppercase for specific template fields
+                if (key.includes('name') || key === 'reg_no' || key === 'cert_no') {
+                    value = value.toUpperCase();
+                }
+                this.formData[key] = value;
+                this.renderDocumentPreview();
+            }
+
+            handlePhotoUpload(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        this.formData.photo = event.target.result;
+                        this.renderDocumentPreview();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            exportPDF() {
+                const element = document.getElementById('documentToPrint');
+                const opt = {
+                    margin:       10,
+                    filename:     `doc_${this.currentTemplateId}_${Date.now()}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(element).save();
+            }
+
+            renderDocumentPreview() {
+                const previewContainer = document.getElementById('documentPreview');
+                const template = TEMPLATES.find(t => t.id === this.currentTemplateId);
+                if (template) {
+                    previewContainer.innerHTML = template.render(this.formData);
+                }
+            }
+
+            renderMainInterface() {
+                const app = document.getElementById('app');
+                const template = TEMPLATES.find(t => t.id === this.currentTemplateId);
+
+                app.innerHTML = `
+                    <!-- Header -->
+                    <header class="bg-white shadow-sm border-b border-slate-200">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-file-invoice text-brand-primary text-xl"></i>
+                                <span class="font-bold text-lg text-slate-900">DocuForm Studio</span>
+                            </div>
+                            <div class="flex items-center space-x-6">
+                                <span class="text-sm font-medium text-slate-500 flex items-center"><i class="fa-solid fa-circle-user text-brand-primary mr-2"></i> Operator ID: <strong class="text-slate-900 ml-1">${this.currentUser}</strong></span>
+                                <button id="logoutBtn" class="text-sm font-medium text-red-600 hover:text-red-700 flex items-center"><i class="fa-solid fa-right-from-bracket mr-2"></i>Sign Out</button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <!-- Main Content -->
+                    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8 overflow-hidden">
+                        <!-- Left Pane: Input Form -->
+                        <div class="lg:w-1/2 flex flex-col gap-6">
+                            <!-- Template Selector -->
+                            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                                <label class="block text-sm font-medium text-slate-700 mb-3">Select Document Configuration</label>
+                                <select id="templateSelector" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all font-medium text-slate-900">
+                                    ${TEMPLATES.map(t => `<option value="${t.id}" ${t.id === this.currentTemplateId ? 'selected' : ''}>${t.name}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <!-- Dynamic Form -->
+                            <div class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col gap-6 overflow-hidden">
+                                <div class="border-b border-slate-200 pb-4">
+                                    <h2 class="text-lg font-bold text-slate-900">${template.name}</h2>
+                                    <p class="text-sm text-slate-500 mt-1">${template.description}</p>
+                                </div>
+                                <form id="dynamicForm" class="flex-1 overflow-y-auto pr-2 space-y-5">
+                                    ${template.fields.map(field => `
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 mb-2">${field.label}</label>${field.type === 'textarea' ?
+                                                `<textarea id="${field.key}" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all placeholder-slate-400" placeholder="${field.placeholder || ''}"></textarea>`
+                                            : field.type === 'file' ?
+                                                `<input type="file" id="${field.key}" accept="image/*" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all bg-slate-50">`
+                                            :
+                                                `<input type="${field.type}" id="${field.key}" class="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-brand-primary outline-none transition-all placeholder-slate-400" placeholder="${field.placeholder || ''}">`
+                                            }
+                                        </div>
+                                    `).join('')}
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Right Pane: Preview & Actions -->
+                        <div class="lg:w-1/2 flex flex-col gap-6">
+                            <!-- Document Preview -->
+                            <div class="flex-1 bg-slate-200 rounded-xl shadow-inner border border-slate-300 p-8 overflow-y-auto flex items-center justify-center">
+                                <div id="documentPreview" class="transform origin-top">
+                                    ${template.render(this.formData)}
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex space-x-4">
+                                <button id="printBtn" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center"><i class="fa-solid fa-print mr-2"></i> Print & Save PDF</button>
+                            </div>
+                        </div>
+                    </main>
+                `;
+
+                // Event Listeners
+                document.getElementById('logoutBtn').addEventListener('click', () => this.handleLogout());
+
+                document.getElementById('templateSelector').addEventListener('change', (e) => this.changeTemplate(e.target.value));
+
+                const inputs = document.querySelectorAll('#dynamicForm input, #dynamicForm textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('input', (e) => {
+                        if (e.target.type === 'file') {
+                            this.handlePhotoUpload(e);
+                        } else {
+                            this.updateFormData(e.target.id, e.target.value);
+                        }
+                    });
+                });
+
+                document.getElementById('printBtn').addEventListener('click', () => this.exportPDF());
+            }
+        }
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', () => {
+            new DocuFormApp();
         });
-
-        dynamicForm.addEventListener('change', (e) => {
-          const target = e.target;
-          const key = target.getAttribute('data-key');
-          if (key && target.tagName === 'SELECT') {
-            state.formData[key] = target.value;
-            updatePreview();
-          }
-        });
-      }
-
-      const photoInput = document.querySelector('input[type="file"][id^="field_"]');
-      if (photoInput) {
-        photoInput.addEventListener('change', (e) => {
-          const file = e.target.files[0];
-          if (file) {
-            const reader = new FileReader();
-            reader.onload = (loadEvt) => {
-              state.photoDataUrl = loadEvt.target.result;
-              const previewWrap = document.getElementById('photoPreviewWrap');
-              if (previewWrap) {
-                previewWrap.innerHTML = `<img src="${state.photoDataUrl}" class="w-full h-full object-cover">`;
-              }
-              updatePreview();
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      }
-
-      const genPdfBtn = document.getElementById('generatePdfBtn');
-      const dlBtn = document.getElementById('downloadDirectBtn');
-      
-      const triggerPdfGeneration = () => {
-        const element = document.getElementById('documentToPrint');
-        if (!element) return;
-
-        const originalBtnText = genPdfBtn.innerHTML;
-        genPdfBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Rendering PDF in Browser...</span>';
-        genPdfBtn.disabled = true;
-
-        const fileNameBase = (state.formData.name_en || state.formData.name || state.formData.child_name || 'document').replace(/\s+/g, '_');
-        const opt = {
-          margin: [10, 10, 10, 10],
-          filename: `${fileNameBase}_${state.activeTemplateId}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(element).save().then(() => {
-          genPdfBtn.innerHTML = originalBtnText;
-          genPdfBtn.disabled = false;
-        }).catch((err) => {
-          console.error(err);
-          alert('PDF generation error: ' + err.message);
-          genPdfBtn.innerHTML = originalBtnText;
-          genPdfBtn.disabled = false;
-        });
-      };
-
-      if (genPdfBtn) genPdfBtn.addEventListener('click', triggerPdfGeneration);
-      if (dlBtn) dlBtn.addEventListener('click', triggerPdfGeneration);
-
-      const printBtn = document.getElementById('instantPrintBtn');
-      if (printBtn) {
-        printBtn.addEventListener('click', () => {
-          window.print();
-        });
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      initFormData(state.activeTemplateId);
-      renderApp();
-    });
-  </script>
+    </script>
 </body>
 </html>
