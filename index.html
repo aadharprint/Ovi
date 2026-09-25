@@ -65,7 +65,7 @@
                     <span class="flex items-center justify-center w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold">1</span>
                     <span class="text-sm font-bold text-slate-700">अपना दस्तावेज़ चुनें</span>
                 </div>
-                <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">कुल 3 सेवाएं</span>
+                <span class="text-xs font-medium text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">कुल 4 सेवाएं</span>
             </div>
 
             <!-- विकल्प 1: मोबाइल टच कार्ड्स (एक टैप में चुनने के लिए) -->
@@ -86,7 +86,6 @@
                             <p class="text-xs text-slate-500 mt-0.5">जन्म प्रमाण पत्र फॉर्म (Meerut)</p>
                         </div>
                     </div>
-                    <!-- रेडियो चेक आइकॉन -->
                     <div class="radio-indicator w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center flex-shrink-0 ml-2">
                         <div class="w-3 h-3 rounded-full bg-blue-600 hidden check-dot"></div>
                     </div>
@@ -132,6 +131,26 @@
                     </div>
                 </div>
 
+                <!-- कार्ड 4 (नया): Affidavit -->
+                <div onclick="selectOption('https://docs.google.com/forms/d/e/1FAIpQLSe3_GpWkowFtdLq5mPO6eiYbvBdkrQp6gJy-hwoT4r_wojaXw/viewform?usp=header', this)" 
+                     class="form-card group cursor-pointer border-2 border-slate-200 rounded-2xl p-4 transition-all duration-200 active:scale-[0.98] hover:border-blue-400 flex items-center justify-between bg-white">
+                    <div class="flex items-center space-x-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0 group-hover:bg-rose-100 transition">
+                            <!-- डॉक्यूमेंट / स्टैम्प आइकॉन -->
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-base leading-snug">Affidavit</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">शपथ पत्र (हलफनामा) फॉर्म</p>
+                        </div>
+                    </div>
+                    <div class="radio-indicator w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center flex-shrink-0 ml-2">
+                        <div class="w-3 h-3 rounded-full bg-blue-600 hidden check-dot"></div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- वैकल्पिक ड्रॉपडाउन (यदि कोई यूजर लिस्ट से चुनना चाहे) -->
@@ -143,6 +162,7 @@
                         <option value="https://docs.google.com/forms/d/1wPfH86NWL3haRHe3Z0dj69FzhTZCUMZQvmdMUANmoIA/viewform">Date of Birth Certificate Meerut</option>
                         <option value="https://docs.google.com/forms/d/1tBAoyEVGeUzWhX6WIHzm9skbka_fjp3qw9odIIP0A90/viewform">Annexure 1 for Adult</option>
                         <option value="https://docs.google.com/forms/d/e/1FAIpQLSd81qZQ7eCtB3Kh90f45GPInQf420YHnXMgwmE_kI8TymI2IA/viewform">Annexure 1A for Children</option>
+                        <option value="https://docs.google.com/forms/d/e/1FAIpQLSe3_GpWkowFtdLq5mPO6eiYbvBdkrQp6gJy-hwoT4r_wojaXw/viewform?usp=header">Affidavit</option>
                     </select>
                     <!-- कस्टम डाउन एरो -->
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-500">
